@@ -1,2 +1,2 @@
 # Customer_Churn_Telecom
-Predict customer churn in the telecom industry using data exploration, hypothesis testing, A/B testing, and machine learning models
+Conducted data preprocessing, hypothesis testing, and A/B tests to analyze customer churn. Built machine learning models, achieving high accuracy with Gradient Boosting. Provided actionable insights to reduce churn using data-driven strategies.
