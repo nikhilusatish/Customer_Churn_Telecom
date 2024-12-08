@@ -10,4 +10,4 @@
 <br>
 ● Evaluated model performance using accuracy, precision, recall, F1-score, and ROC-AUC, providing actionable insights and recommendations for reducing churn in the telecom industry.
 <br>
-Author-Nikhil
+Author-Nikhil Satish
