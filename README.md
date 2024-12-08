@@ -9,3 +9,5 @@
 ● Developed and optimized machine learning models (Logistic Regression, Decision Tree, Random Forest, Gradient Boosting) to predict churn, with Gradient Boosting showing the best performance.
 <br>
 ● Evaluated model performance using accuracy, precision, recall, F1-score, and ROC-AUC, providing actionable insights and recommendations for reducing churn in the telecom industry.
+<br>
+Author-Nikhil
