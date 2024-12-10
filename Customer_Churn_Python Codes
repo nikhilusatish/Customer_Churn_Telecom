@@ -1,0 +1,342 @@
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy.stats import chi2_contingency
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, roc_curve
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+
+
+# Load the dataset
+file_path = '/Users/aswinanilkumar/Desktop/Programming Statistics for Business/customer_churn_prediction_dataset.csv'
+df = pd.read_csv(file_path)
+
+# Display basic information about the dataset
+print(df.info())
+print(df.describe())
+print(df.head())
+
+# Check for missing values
+print(df.isnull().sum())
+
+# Data Cleaning: Handle missing values, convert categorical data, etc.
+# Handling special cases in categorical columns
+df['TotalCharges'] = pd.to_numeric(df['TotalCharges'], errors='coerce')
+df.dropna(inplace=True)
+
+# Replace "No phone service" and "No internet service" with more appropriate categories or missing values
+df_cleaned = df.copy()
+
+# Handling categorical special cases
+df_cleaned['MultipleLines'].replace('No phone service', 'No', inplace=True)
+services = ['OnlineSecurity', 'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies']
+for service in services:
+    df_cleaned[service].replace('No internet service', 'No', inplace=True)
+
+# Define categorical columns to inspect unique values
+categorical_columns = df_cleaned.select_dtypes(include=['object']).columns
+
+# Verify changes
+cleaned_unique_values = {col: df_cleaned[col].unique() for col in categorical_columns}
+
+# Display unique values after cleaning
+print("\nUnique values in categorical columns after cleaning:")
+for col, unique_vals in cleaned_unique_values.items():
+    print(f"{col}: {unique_vals}")
+
+# Feature Engineering: Create new features if necessary
+# Example: Tenure buckets
+df['tenure_group'] = pd.cut(df['tenure'], bins=[0, 12, 24, 48, 60, 72], labels=['0-12', '12-24', '24-48', '48-60', '60-72'])
+
+# Checking for unique values in categorical columns to identify inconsistencies
+unique_values = {col: df[col].unique() for col in categorical_columns}
+
+# Summary of unique values for categorical features
+unique_values
+
+# Plot distributions for numerical features
+
+# Setting up the visual style
+sns.set(style="whitegrid")
+
+# Plot distributions for numerical features
+
+# Tenure
+plt.figure(figsize=(8, 6))
+sns.histplot(df_cleaned['tenure'], kde=True)
+plt.title('Distribution of Tenure')
+plt.show()
+
+# Monthly Charges
+plt.figure(figsize=(8, 6))
+sns.histplot(df_cleaned['MonthlyCharges'], kde=True)
+plt.title('Distribution of Monthly Charges')
+plt.show()
+
+# Total Charges
+plt.figure(figsize=(8, 6))
+sns.histplot(df_cleaned['TotalCharges'], kde=True)
+plt.title('Distribution of Total Charges')
+plt.show()
+
+# Plotting the relationship between categorical features and Churn
+
+# Contract
+plt.figure(figsize=(8, 6))
+sns.countplot(data=df_cleaned, x='Contract', hue='Churn')
+plt.title('Churn by Contract Type')
+plt.show()
+
+# Internet Service
+plt.figure(figsize=(8, 6))
+sns.countplot(data=df_cleaned, x='InternetService', hue='Churn')
+plt.title('Churn by Internet Service Type')
+plt.show()
+
+# Payment Method
+plt.figure(figsize=(8, 6))
+sns.countplot(data=df_cleaned, x='PaymentMethod', hue='Churn')
+plt.title('Churn by Payment Method')
+plt.show()
+
+# Gender
+plt.figure(figsize=(8, 6))
+sns.countplot(data=df_cleaned, x='gender', hue='Churn')
+plt.title('Churn by Gender')
+plt.show()
+
+# Partner
+plt.figure(figsize=(8, 6))
+sns.countplot(data=df_cleaned, x='Partner', hue='Churn')
+plt.title('Churn by Partner Status')
+plt.show()
+
+# Dependents
+plt.figure(figsize=(8, 6))
+sns.countplot(data=df_cleaned, x='Dependents', hue='Churn')
+plt.title('Churn by Dependents Status')
+plt.show()
+
+from scipy.stats import chi2_contingency
+
+# Hypothesis 1: Contract Type and Churn
+contingency_contract = pd.crosstab(df_cleaned['Contract'], df_cleaned['Churn'])
+chi2_contract, p_contract, dof_contract, expected_contract = chi2_contingency(contingency_contract)
+
+# Hypothesis 2: Internet Service Type and Churn
+contingency_internet = pd.crosstab(df_cleaned['InternetService'], df_cleaned['Churn'])
+chi2_internet, p_internet, dof_internet, expected_internet = chi2_contingency(contingency_internet)
+
+# Hypothesis 3: Payment Method and Churn
+contingency_payment = pd.crosstab(df_cleaned['PaymentMethod'], df_cleaned['Churn'])
+chi2_payment, p_payment, dof_payment, expected_payment = chi2_contingency(contingency_payment)
+
+# Display the p-values
+print(f"P-value for Contract Type and Churn: {p_contract:.4f}")
+print(f"P-value for Internet Service Type and Churn: {p_internet:.4f}")
+print(f"P-value for Payment Method and Churn: {p_payment:.4f}")
+
+# Significance level
+alpha = 0.05
+
+# Interpretation for Contract Type
+if p_contract < alpha:
+    print("Reject the null hypothesis: There is a significant relationship between Contract Type and Churn.")
+else:
+    print("Fail to reject the null hypothesis: There is no significant relationship between Contract Type and Churn.")
+
+# Interpretation for Internet Service Type
+if p_internet < alpha:
+    print("Reject the null hypothesis: There is a significant relationship between Internet Service Type and Churn.")
+else:
+    print("Fail to reject the null hypothesis: There is no significant relationship between Internet Service Type and Churn.")
+
+# Interpretation for Payment Method
+if p_payment < alpha:
+    print("Reject the null hypothesis: There is a significant relationship between Payment Method and Churn.")
+else:
+    print("Fail to reject the null hypothesis: There is no significant relationship between Payment Method and Churn.")
+
+import numpy as np
+
+# Randomly assign customers to control and treatment groups
+np.random.seed(42)
+df_cleaned['Group'] = np.random.choice(['Control', 'Treatment'], size=len(df_cleaned), p=[0.5, 0.5])
+
+# Simulate the retention strategy by assuming the treatment group received a discount
+# Let's assume the discount reduces churn by 10% for customers in the treatment group
+df_cleaned['Churn_Treated'] = df_cleaned.apply(
+    lambda x: 'No' if x['Group'] == 'Treatment' and x['Churn'] == 'Yes' and np.random.rand() < 0.1 else x['Churn'],
+    axis=1
+)
+# Chi-Square test on the new churn data
+contingency_ab_test = pd.crosstab(df_cleaned['Group'], df_cleaned['Churn_Treated'])
+chi2_ab_test, p_ab_test, dof_ab_test, expected_ab_test = chi2_contingency(contingency_ab_test)
+
+# Display the p-value
+print(f"P-value for A/B test: {p_ab_test:.4f}")
+
+# Interpretation
+if p_ab_test < alpha:
+    print("Reject the null hypothesis: The retention strategy has a significant effect on reducing churn.")
+else:
+    print("Fail to reject the null hypothesis: The retention strategy does not have a significant effect on reducing churn.")
+# Assume df is your DataFrame containing the data
+categorical_features = df.select_dtypes(include=['object']).columns
+numeric_features = df.select_dtypes(include=['float64', 'int64']).columns
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), numeric_features),
+        ('cat', OneHotEncoder(drop='first'), categorical_features)
+    ])
+X = df.drop(columns=['Churn'])  # Assuming 'Churn' is the target variable
+y = df['Churn'].apply(lambda x: 1 if x == 'Yes' else 0)  # Convert 'Yes'/'No' to 1/0 for classification
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+# Assuming 'Churn' is the target variable in the DataFrame `df`
+X = df.drop(columns=['Churn'])  # Drop 'Churn' from features
+y = df['Churn'].apply(lambda x: 1 if x == 'Yes' else 0)  # Convert 'Yes'/'No' to 1/0 for classification
+print(X.columns)  # This should not include 'Churn'
+# Define which features are categorical and which are numeric
+categorical_features = X.select_dtypes(include=['object']).columns
+numeric_features = X.select_dtypes(include=['float64', 'int64']).columns
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), numeric_features),
+        ('cat', OneHotEncoder(drop='first'), categorical_features)
+    ])
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression
+
+# Define the preprocessor with 'handle_unknown' set to 'ignore' for OneHotEncoder
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), numeric_features),
+        ('cat', OneHotEncoder(drop='first', handle_unknown='ignore'), categorical_features)
+    ])
+
+# Logistic Regression Model
+logreg_pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+                                  ('classifier', LogisticRegression(random_state=42))])
+
+# Fit the model
+logreg_pipeline.fit(X_train, y_train)
+
+# Predictions
+y_pred_logreg = logreg_pipeline.predict(X_test)
+y_prob_logreg = logreg_pipeline.predict_proba(X_test)[:, 1]
+
+tree_pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+                                ('classifier', DecisionTreeClassifier(random_state=42))])
+
+tree_pipeline.fit(X_train, y_train)
+y_pred_tree = tree_pipeline.predict(X_test)
+y_prob_tree = tree_pipeline.predict_proba(X_test)[:, 1]
+rf_pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+                              ('classifier', RandomForestClassifier(random_state=42))])
+
+rf_pipeline.fit(X_train, y_train)
+y_pred_rf = rf_pipeline.predict(X_test)
+y_prob_rf = rf_pipeline.predict_proba(X_test)[:, 1]
+
+gb_pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+                              ('classifier', GradientBoostingClassifier(random_state=42))])
+
+gb_pipeline.fit(X_train, y_train)
+y_pred_gb = gb_pipeline.predict(X_test)
+y_prob_gb = gb_pipeline.predict_proba(X_test)[:, 1]
+
+param_grid_rf = {
+    'classifier__n_estimators': [100, 200, 300],
+    'classifier__max_depth': [None, 10, 20, 30],
+    'classifier__min_samples_split': [2, 5, 10],
+    'classifier__min_samples_leaf': [1, 2, 4]
+}
+
+grid_search_rf = GridSearchCV(rf_pipeline, param_grid_rf, cv=5, n_jobs=-1, verbose=1)
+grid_search_rf.fit(X_train, y_train)
+
+# Best parameters and score
+print("Best parameters for Random Forest:", grid_search_rf.best_params_)
+print("Best cross-validated score for Random Forest:", grid_search_rf.best_score_)
+
+def evaluate_classification(y_test, y_pred, y_prob):
+    print(f'Accuracy: {accuracy_score(y_test, y_pred):.3f}')
+    print(f'Precision: {precision_score(y_test, y_pred):.3f}')
+    print(f'Recall: {recall_score(y_test, y_pred):.3f}')
+    print(f'F1-Score: {f1_score(y_test, y_pred):.3f}')
+    print(f'ROC-AUC: {roc_auc_score(y_test, y_prob):.3f}')
+
+print("\nLogistic Regression Metrics:")
+evaluate_classification(y_test, y_pred_logreg, y_prob_logreg)
+
+print("\nDecision Tree Metrics:")
+evaluate_classification(y_test, y_pred_tree, y_prob_tree)
+
+print("\nRandom Forest Metrics:")
+evaluate_classification(y_test, y_pred_rf, y_prob_rf)
+
+print("\nGradient Boosting Metrics:")
+evaluate_classification(y_test, y_pred_gb, y_prob_gb)
+def evaluate_regression(y_test, y_prob):
+    rmse = np.sqrt(mean_squared_error(y_test, y_prob))
+    mae = mean_absolute_error(y_test, y_prob)
+    r2 = r2_score(y_test, y_prob)
+    print(f"RMSE: {rmse:.3f}")
+    print(f"MAE: {mae:.3f}")
+    print(f"R-squared: {r2:.3f}")
+
+print("\nLogistic Regression Regression Metrics:")
+evaluate_regression(y_test, y_prob_logreg)
+
+print("\nDecision Tree Regression Metrics:")
+evaluate_regression(y_test, y_prob_tree)
+
+print("\nRandom Forest Regression Metrics:")
+evaluate_regression(y_test, y_prob_rf)
+
+print("\nGradient Boosting Regression Metrics:")
+evaluate_regression(y_test, y_prob_gb)
+models = {
+    "Logistic Regression": y_pred_logreg,
+    "Decision Tree": y_pred_tree,
+    "Random Forest": y_pred_rf,
+    "Gradient Boosting": y_pred_gb
+}
+
+for model_name, y_pred in models.items():
+    cm = confusion_matrix(y_test, y_pred)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['No Churn', 'Churn'])
+    disp.plot(cmap=plt.cm.Blues)
+    plt.title(f'Confusion Matrix - {model_name}')
+    plt.show()
+probs = {
+    "Logistic Regression": y_prob_logreg,
+    "Decision Tree": y_prob_tree,
+    "Random Forest": y_prob_rf,
+    "Gradient Boosting": y_prob_gb
+}
+
+plt.figure(figsize=(10, 7))
+for model_name, y_prob in probs.items():
+    fpr, tpr, _ = roc_curve(y_test, y_prob)
+    plt.plot(fpr, tpr, label=f'{model_name} (AUC = {roc_auc_score(y_test, y_prob):.3f})')
+
+plt.plot([0, 1], [0, 1], 'k--')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve Comparison')
+plt.legend(loc='lower right')
+plt.show()
+
